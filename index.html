@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Guia de Tecidos - Be Diff</title>
+    
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+
+    <style>
+        /* ===============================
+           BASE
+        ================================ */
+        body { margin: 0; font-family: 'Montserrat', sans-serif; background: #fff; color: #111827; }
+        .bdiff-wrapper { padding: 40px 16px 60px; }
+        .bdiff-hero { max-width: 1100px; margin: 0 auto 22px; }
+        .bdiff-title { font-size: clamp(24px, 2.6vw, 36px); font-weight: 700; margin: 0 0 8px; }
+        .bdiff-subtitle { color: #6B7280; font-size: 15px; margin-bottom: 30px; }
+
+        /* QUIZ */
+        .bdiff-quiz { max-width: 1100px; margin: 0 auto 40px; padding: 24px; border-radius: 16px; background: #F9FAFB; border: 1px solid #E5E7EB; }
+        .bdiff-quiz-step { display: none; }
+        .bdiff-quiz-step.active { display: block; }
+        #quiz-mercado { display: grid; grid-template-columns: repeat(7, 1fr); gap: 16px; margin-bottom: 30px; }
+        
+        .bdiff-market-card { height: 140px; border-radius: 18px; border: 1px solid #E5E7EB; background: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; cursor: pointer; transition: 0.2s; }
+        .bdiff-market-card i { font-size: 34px !important; color: #6B7280; }
+        .bdiff-market-card span { font-size: 10px; font-weight: 700; text-align: center; padding: 0 8px; }
+        .bdiff-market-card.active { background: #FBF6F3; border-color: #D6B8A9; }
+
+        .bdiff-quiz-options { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 15px; }
+        .bdiff-quiz-options button { background: #fff; border: 1px solid #E5E7EB; padding: 8px 16px; border-radius: 999px; cursor: pointer; font-family: 'Montserrat'; font-size: 12px; transition: 0.2s; }
+        .bdiff-quiz-options button.active { background: #3A2A24; color: #fff; border-color: #3A2A24; }
+
+        /* GRID E CARDS */
+        .bdiff-grid { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        .bdiff-card { perspective: 1200px; }
+        .bdiff-card-inner { position: relative; width: 100%; height: 480px; transition: transform 0.6s; transform-style: preserve-3d; }
+        .bdiff-card:hover .bdiff-card-inner { transform: rotateY(180deg); }
+        
+        .bdiff-face { position: absolute; inset: 0; backface-visibility: hidden; border-radius: 16px; border: 1px solid #E5E7EB; background: #fff; overflow: hidden; }
+        .bdiff-front img { width: 100%; height: 240px; object-fit: cover; }
+        .bdiff-front .content { padding: 16px; }
+        .bdiff-title-card { font-size: 15px; font-weight: 700; text-transform: uppercase; margin-bottom: 12px; }
+
+        .bdiff-back { transform: rotateY(180deg); padding: 16px; display: flex; flex-direction: column; }
+        .bdiff-back-scroll { flex: 1; overflow-y: auto; padding-right: 5px; margin-bottom: 10px; }
+        .bdiff-back h4 { font-size: 11px; text-transform: uppercase; color: #9CA3AF; margin: 15px 0 5px; }
+        .bdiff-back p { font-size: 12px; line-height: 1.5; margin: 0; color: #374151; }
+        .bdiff-stars { font-size: 16px; color: #FFD700; margin-bottom: 10px; }
+
+        .bdiff-btn { display: block; text-align: center; padding: 12px; border-radius: 999px; background: #E6CFC3; color: #3A2A24; font-weight: 800; text-decoration: none; font-size: 12px; }
+
+        @media(max-width:1024px){ .bdiff-grid{grid-template-columns:repeat(3,1fr);} #quiz-mercado{grid-template-columns:repeat(4,1fr);} }
+        @media(max-width:480px){ .bdiff-grid{grid-template-columns:1fr;} #quiz-mercado{grid-template-columns:repeat(2,1fr);} }
+    </style>
+</head>
+<body>
+
+    <div class="bdiff-wrapper">
+        <div class="bdiff-hero">
+            <h1 class="bdiff-title">Escolha o tecido ideal para o seu projeto</h1>
+            <p class="bdiff-subtitle">Passe o mouse sobre o tecido para ver detalhes técnicos.</p>
+        </div>
+
+        <div class="bdiff-quiz">
+            <div class="bdiff-quiz-step active" id="step-mercado">
+                <h2>Qual é o seu mercado?</h2>
+                <div id="quiz-mercado"></div>
+            </div>
+            <div class="bdiff-quiz-step" id="step-submercado">
+                <h2>Refinar por subcategoria:</h2>
+                <div class="bdiff-quiz-options" id="quiz-submercado"></div>
+            </div>
+            <button id="quiz-reset" style="margin-top:20px; cursor:pointer; padding:8px 16px; border-radius:8px; border:1px solid #ddd; background:#fff;">Limpar seleção</button>
+        </div>
+
+        <div class="bdiff-grid" id="bdiff-grid"></div>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", () => {
+            const grid = document.getElementById("bdiff-grid");
+            const mercadoBox = document.getElementById("quiz-mercado");
+            const submercadoBox = document.getElementById("quiz-submercado");
+            const stepSub = document.getElementById("step-submercado");
+            const resetBtn = document.getElementById("quiz-reset");
+
+            const SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRXsQ1VZ_E6N5wIU-GRUmh_wohwRI_RzTsk3C_UqCZQiK7vt-2tqxR88wezHHia1V3OcqVVBfz_3A-L/pub?output=csv";
+
+            const MERCADOS_FIXOS = ["Acessórios e Brindes", "Artesanato", "Decoração", "Eventos e Corporativo", "Linha Infantil e Enxoval", "Mercado Pet", "Moda e Vestuário"];
+            const MERCADO_ICON = { "acessorios e brindes": "ph-bold ph-handbag", "artesanato": "ph-bold ph-scissors", "decoracao": "ph-bold ph-couch", "eventos e corporativo": "ph-bold ph-buildings", "linha infantil e enxoval": "ph-bold ph-baby", "mercado pet": "ph-bold ph-paw-print", "moda e vestuario": "ph-bold ph-t-shirt" };
+
+            let cards = [];
+            let selectedMercadoKey = null;
+            let selectedSubKey = null;
+            const subIndexByMercado = new Map();
+
+            const norm = str => (str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+            const splitMulti = str => (str || "").split(/[;,|]/g).map(s => s.trim()).filter(Boolean);
+
+            function buildMercadoCards() {
+                mercadoBox.innerHTML = "";
+                MERCADOS_FIXOS.forEach(label => {
+                    const key = norm(label);
+                    const card = document.createElement("div");
+                    card.className = "bdiff-market-card";
+                    card.dataset.key = key;
+                    card.innerHTML = `<i class="${MERCADO_ICON[key]}"></i><span>${label.toUpperCase()}</span>`;
+                    card.onclick = () => onSelectMercado(key);
+                    mercadoBox.appendChild(card);
+                });
+            }
+
+            function onSelectMercado(key) {
+                selectedMercadoKey = key; selectedSubKey = null;
+                mercadoBox.querySelectorAll(".bdiff-market-card").forEach(el => el.classList.toggle("active", el.dataset.key === key));
+                buildSubmercadoButtons(key);
+                applyFilters();
+            }
+
+            function buildSubmercadoButtons(mercadoKey) {
+                submercadoBox.innerHTML = "";
+                const subMap = subIndexByMercado.get(mercadoKey);
+                if (!subMap) { stepSub.classList.remove("active"); return; }
+                stepSub.classList.add("active");
+                
+                const btnAll = document.createElement("button");
+                btnAll.innerText = "Todos";
+                btnAll.onclick = () => { selectedSubKey = null; updateSubButtons(btnAll); applyFilters(); };
+                submercadoBox.appendChild(btnAll);
+
+                subMap.forEach((val, sKey) => {
+                    const btn = document.createElement("button");
+                    btn.innerText = val.subLabel;
+                    btn.onclick = () => { selectedSubKey = sKey; updateSubButtons(btn); applyFilters(); };
+                    submercadoBox.appendChild(btn);
+                });
+            }
+
+            function updateSubButtons(activeBtn) {
+                submercadoBox.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+                activeBtn.classList.add("active");
+            }
+
+            function applyFilters() {
+                cards.forEach(card => {
+                    const mOK = !selectedMercadoKey || card.dataset.mercados.split(",").includes(selectedMercadoKey);
+                    const sOK = !selectedSubKey || card.dataset.submercados.split(",").includes(selectedSubKey);
+                    card.style.display = mOK && sOK ? "" : "none";
+                });
+            }
+
+            Papa.parse(SHEET_URL, {
+                download: true, header: true, skipEmptyLines: true,
+                complete: ({ data }) => {
+                    grid.innerHTML = ""; cards = [];
+                    data.forEach(item => {
+                        if (!item["ID Wbuy"]) return; // Pula se não tiver link
+
+                        const mRaw = splitMulti(item["Mercado"]);
+                        const sRaw = splitMulti(item["Submercado"]);
+                        
+                        mRaw.forEach(m => {
+                            const mk = norm(m);
+                            if(!subIndexByMercado.has(mk)) subIndexByMercado.set(mk, new Map());
+                            sRaw.forEach(s => subIndexByMercado.get(mk).set(norm(s), {subLabel: s}));
+                        });
+
+                        const cor = parseInt(item["Poder de Cor"]) || 0;
+                        const card = document.createElement("div");
+                        card.className = "bdiff-card";
+                        card.dataset.mercados = mRaw.map(norm).join(",");
+                        card.dataset.submercados = sRaw.map(norm).join(",");
+                        
+                        // USA O LINK DIRETO DA COLUNA A
+                        const linkFinal = item["ID Wbuy"];
+
+                        card.innerHTML = `
+                        <div class="bdiff-card-inner">
+                            <div class="bdiff-face bdiff-front">
+                                ${norm(item["Sustentável"]) === "sim" ? '<div class="bdiff-selo-sustentavel"><i class="ph ph-recycle"></i> Sustentável</div>' : ""}
+                                <img src="${item["Foto Tecido"] || ""}">
+                                <div class="content">
+                                    <h3 class="bdiff-title-card">${item["Nome do Tecido"]}</h3>
+                                    <div class="bdiff-tags">
+                                        <span class="bdiff-tag"><i class="ph ph-yarn"></i>${item["Tipo de Base"]}</span>
+                                        <span class="bdiff-tag"><i class="ph ph-leaf"></i>${item["Fibras"]}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bdiff-face bdiff-back">
+                                <div class="bdiff-back-scroll">
+                                    <h4>Descrição</h4><p>${item["Descrição"] || ""}</p>
+                                    <h4>Intensidade de cor</h4><div class="bdiff-stars">${"★".repeat(cor)}${"☆".repeat(5-cor)}</div>
+                                    <h4>Prós (Técnico)</h4><p>${item["Prós (Técnico)"] || ""}</p>
+                                    <h4>Contras (Técnico)</h4><p>${item["Contras (Técnico)"] || ""}</p>
+                                    <h4>Aplicações</h4><p>${item["Sugestão de Produtos"] || ""}</p>
+                                </div>
+                                <a href="${linkFinal}" target="_blank" class="bdiff-btn">COMPRAR AGORA</a>
+                            </div>
+                        </div>`;
+                        grid.appendChild(card);
+                        cards.push(card);
+                    });
+                    buildMercadoCards();
+                }
+            });
+            resetBtn.onclick = () => { selectedMercadoKey = null; selectedSubKey = null; stepSub.classList.remove("active"); buildMercadoCards(); applyFilters(); };
+        });
+    </script>
+</body>
+</html>
