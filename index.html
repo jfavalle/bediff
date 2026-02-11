@@ -20,7 +20,31 @@
 
     <style>
         body { margin: 0; font-family: 'Montserrat', sans-serif; background: #fff; color: #111827; }
-        .bdiff-wrapper { padding: 40px 16px 60px; }
+        
+        /* NOVO: Estilo do Botão Voltar */
+        .bdiff-nav-header {
+            max-width: 1100px;
+            margin: 20px auto 0;
+            padding: 0 16px;
+            display: flex;
+            justify-content: flex-start;
+        }
+        .bdiff-btn-back {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+            color: #374151;
+            font-size: 13px;
+            font-weight: 600;
+            transition: 0.2s;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: #F3F4F6;
+        }
+        .bdiff-btn-back:hover { background: #E5E7EB; color: #000; }
+
+        .bdiff-wrapper { padding: 20px 16px 60px; } /* Ajustado padding superior */
         .bdiff-hero { max-width: 1100px; margin: 0 auto 22px; }
         .bdiff-title { font-size: clamp(24px, 2.6vw, 36px); font-weight: 700; margin: 0 0 8px; }
         .bdiff-subtitle { color: #6B7280; font-size: 15px; }
@@ -102,6 +126,12 @@
     </style>
 </head>
 <body>
+
+<div class="bdiff-nav-header">
+    <a href="https://www.bediff.com.br" class="bdiff-btn-back">
+        <i class="ph-bold ph-arrow-left"></i> Voltar para a Loja
+    </a>
+</div>
 
 <div class="bdiff-wrapper">
     <div class="bdiff-hero">
@@ -202,7 +232,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 e.stopPropagation(); 
                 selectedSubKey = sKey; 
                 
-                // RASTREAMENTO GA4: Subcategoria selecionada
+                // GA4 TRACKING
                 gtag('event', 'selecao_subcategoria', {
                     'nome_mercado': selectedMercadoKey,
                     'nome_subcategoria': sKey
@@ -230,7 +260,7 @@ document.addEventListener("DOMContentLoaded", () => {
         selectedMercadoKey = key; 
         selectedSubKey = null;
         
-        // RASTREAMENTO GA4: Mercado selecionado
+        // GA4 TRACKING
         gtag('event', 'selecao_mercado', {
             'nome_mercado': key
         });
@@ -263,8 +293,6 @@ document.addEventListener("DOMContentLoaded", () => {
                     cards.forEach(c => c.classList.remove('is-flipped'));
                     if (!isFlipped) {
                         this.classList.add('is-flipped');
-                        
-                        // RASTREAMENTO GA4: Clique para ver detalhes (Flip do card)
                         gtag('event', 'ver_detalhes_tecido', {
                             'tecido': item["Nome do Tecido"]
                         });
@@ -306,7 +334,3 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     resetBtn.onclick = () => { selectedMercadoKey = null; selectedSubKey = null; stepSub.classList.remove("active"); buildMercadoCards(); applyFilters(); };
 });
-</script>
-
-</body>
-</html>
